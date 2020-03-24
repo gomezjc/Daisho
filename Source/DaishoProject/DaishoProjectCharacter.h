@@ -96,5 +96,16 @@ public:
 private:
 	// allows to get the Stop Speed and don't override the value when the loop of Tick Continues
 	bool bAccelerationFlag;
+
+private:
+	// Setter for bAccelerationFlag Variable
+	void SetAccelerationFlag(bool Value);
+
+	// Setter for the speed Walk
+	void SetWalkSpeed();
+	
+	void SetRunSpeed();
+	
+	void SetSprintSpeed();
 };
 

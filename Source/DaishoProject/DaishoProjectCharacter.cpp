@@ -77,6 +77,12 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ACharacter::Jump);
 	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
+	PlayerInputComponent->BindAction("Walk", IE_Pressed, this, &ADaishoProjectCharacter::SetWalkSpeed);
+	PlayerInputComponent->BindAction("Walk", IE_Released, this, &ADaishoProjectCharacter::SetRunSpeed);
+	
+	PlayerInputComponent->BindAction("Sprint", IE_Pressed, this, &ADaishoProjectCharacter::SetSprintSpeed);
+	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADaishoProjectCharacter::SetRunSpeed);
+
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADaishoProjectCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADaishoProjectCharacter::MoveRight);
 
@@ -86,23 +92,7 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAxis("Turn", this, &APawn::AddControllerYawInput);
 	PlayerInputComponent->BindAxis("TurnRate", this, &ADaishoProjectCharacter::TurnAtRate);
 	PlayerInputComponent->BindAxis("LookUp", this, &APawn::AddControllerPitchInput);
-	PlayerInputComponent->BindAxis("LookUpRate", this, &ADaishoProjectCharacter::LookUpAtRate);
-
-	// handle touch devices
-	PlayerInputComponent->BindTouch(IE_Pressed, this, &ADaishoProjectCharacter::TouchStarted);
-	PlayerInputComponent->BindTouch(IE_Released, this, &ADaishoProjectCharacter::TouchStopped);
-
-}
-
-
-void ADaishoProjectCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		Jump();
-}
-
-void ADaishoProjectCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
-{
-		StopJumping();
+	PlayerInputComponent->BindAxis("LookUpRate", this, &ADaishoProjectCharacter::LookUpAtRate);	
 }
 
 void ADaishoProjectCharacter::Tick(float DeltaSeconds)
@@ -116,16 +106,17 @@ void ADaishoProjectCharacter::Tick(float DeltaSeconds)
 	if(!bIsAccelerating && bAccelerationFlag)
 	{
 		SpeedWhenStopping = CurrentSpeed;
-		bAccelerationFlag = false;
+		SetAccelerationFlag(false);
 		UE_LOG(LogTemp, Warning, TEXT("Speed when stopping %f"), SpeedWhenStopping);
 	}
 
 	// Set velocity of player
-	CurrentSpeed = UKismetMathLibrary::Clamp(GetVelocity().Size(),WalkSpeed,RunSpeed);
+	CurrentSpeed = GetVelocity().Size();
 	UE_LOG(LogTemp, Warning, TEXT("Current Speed %f"), CurrentSpeed);
 	
 	// Set The max walk speed of player for Walk, Run and Sprint actions
 	GetCharacterMovement()->MaxWalkSpeed = UKismetMathLibrary::FInterpTo(GetCharacterMovement()->MaxWalkSpeed, MaxSpeed, DeltaSeconds, 4.0f);
+	//UE_LOG(LogTemp, Warning, TEXT("MAxWalkSpeed %f"), GetCharacterMovement()->MaxWalkSpeed);
 }
 
 void ADaishoProjectCharacter::TurnAtRate(float Rate)
@@ -144,7 +135,7 @@ void ADaishoProjectCharacter::MoveForward(float Value)
 {
 	if ((Controller != NULL) && (Value != 0.0f))
 	{
-		bAccelerationFlag = true;
+		SetAccelerationFlag(true);
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -159,7 +150,7 @@ void ADaishoProjectCharacter::MoveRight(float Value)
 {
 	if ( (Controller != NULL) && (Value != 0.0f) )
 	{
-		bAccelerationFlag = true;
+		SetAccelerationFlag(true);
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -169,4 +160,24 @@ void ADaishoProjectCharacter::MoveRight(float Value)
 		// add movement in that direction
 		AddMovementInput(Direction, Value);
 	}
+}
+
+void ADaishoProjectCharacter::SetAccelerationFlag(bool Value)
+{
+	bAccelerationFlag = Value;
+}
+
+void ADaishoProjectCharacter::SetWalkSpeed()
+{
+	MaxSpeed = WalkSpeed;
+}
+
+void ADaishoProjectCharacter::SetRunSpeed()
+{
+	MaxSpeed = RunSpeed;
+}
+
+void ADaishoProjectCharacter::SetSprintSpeed()
+{
+	MaxSpeed = SprintSpeed;
 }
