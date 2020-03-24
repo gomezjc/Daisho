@@ -29,10 +29,32 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category=Camera)
 	float BaseLookUpRate;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float CurrentSpeed;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float SpeedWhenStopping;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	float MaxSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float WalkSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float RunSpeed;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float SprintSpeed;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bIsMoving;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bIsAccelerating;
+
 protected:
 
-	/** Resets HMD orientation in VR. */
-	void OnResetVR();
 
 	/** Called for forwards/backward input */
 	void MoveForward(float Value);
@@ -58,6 +80,8 @@ protected:
 	/** Handler for when a touch input stops. */
 	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
 
+	virtual void Tick(float DeltaSeconds) override;
+
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -68,5 +92,9 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+private:
+	// allows to get the Stop Speed and don't override the value when the loop of Tick Continues
+	bool bAccelerationFlag;
 };
 

@@ -1,6 +1,9 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
 #include "DaishoProjectCharacter.h"
+
+#include <string>
+
 #include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -8,18 +11,35 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Math/Vector.h"
+#include "Kismet/KismetMathLibrary.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ADaishoProjectCharacter
 
 ADaishoProjectCharacter::ADaishoProjectCharacter()
 {
+
+	PrimaryActorTick.bCanEverTick = true;
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 
 	// set our turn rates for input
 	BaseTurnRate = 45.f;
 	BaseLookUpRate = 45.f;
+
+	// Set movement values
+	bIsMoving = false;
+	bIsAccelerating = false;
+	bAccelerationFlag = false;
+	
+	WalkSpeed = 0.0f;
+	RunSpeed = 0.0f;
+	SprintSpeed = 0.0f;
+	
+	SpeedWhenStopping = 0.0f;
+	CurrentSpeed = 0.0f;
+	MaxSpeed = 600.0f;
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -72,15 +92,8 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindTouch(IE_Pressed, this, &ADaishoProjectCharacter::TouchStarted);
 	PlayerInputComponent->BindTouch(IE_Released, this, &ADaishoProjectCharacter::TouchStopped);
 
-	// VR headset functionality
-	PlayerInputComponent->BindAction("ResetVR", IE_Pressed, this, &ADaishoProjectCharacter::OnResetVR);
 }
 
-
-void ADaishoProjectCharacter::OnResetVR()
-{
-	UHeadMountedDisplayFunctionLibrary::ResetOrientationAndPosition();
-}
 
 void ADaishoProjectCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVector Location)
 {
@@ -90,6 +103,29 @@ void ADaishoProjectCharacter::TouchStarted(ETouchIndex::Type FingerIndex, FVecto
 void ADaishoProjectCharacter::TouchStopped(ETouchIndex::Type FingerIndex, FVector Location)
 {
 		StopJumping();
+}
+
+void ADaishoProjectCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	bIsMoving = !GetCapsuleComponent()->GetComponentVelocity().Equals(FVector::ZeroVector, 0.0001f);
+	bIsAccelerating = GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.0f;
+
+	// if is not accelerating, must get the last velocity to stop the player and execute the appropriate animation
+	if(!bIsAccelerating && bAccelerationFlag)
+	{
+		SpeedWhenStopping = CurrentSpeed;
+		bAccelerationFlag = false;
+		UE_LOG(LogTemp, Warning, TEXT("Speed when stopping %f"), SpeedWhenStopping);
+	}
+
+	// Set velocity of player
+	CurrentSpeed = UKismetMathLibrary::Clamp(GetVelocity().Size(),WalkSpeed,RunSpeed);
+	UE_LOG(LogTemp, Warning, TEXT("Current Speed %f"), CurrentSpeed);
+	
+	// Set The max walk speed of player for Walk, Run and Sprint actions
+	GetCharacterMovement()->MaxWalkSpeed = UKismetMathLibrary::FInterpTo(GetCharacterMovement()->MaxWalkSpeed, MaxSpeed, DeltaSeconds, 4.0f);
 }
 
 void ADaishoProjectCharacter::TurnAtRate(float Rate)
@@ -108,6 +144,7 @@ void ADaishoProjectCharacter::MoveForward(float Value)
 {
 	if ((Controller != NULL) && (Value != 0.0f))
 	{
+		bAccelerationFlag = true;
 		// find out which way is forward
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
@@ -122,6 +159,7 @@ void ADaishoProjectCharacter::MoveRight(float Value)
 {
 	if ( (Controller != NULL) && (Value != 0.0f) )
 	{
+		bAccelerationFlag = true;
 		// find out which way is right
 		const FRotator Rotation = Controller->GetControlRotation();
 		const FRotator YawRotation(0, Rotation.Yaw, 0);
