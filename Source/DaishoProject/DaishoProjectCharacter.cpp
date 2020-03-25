@@ -13,6 +13,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Math/Vector.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "TimerManager.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ADaishoProjectCharacter
@@ -112,12 +113,21 @@ void ADaishoProjectCharacter::Tick(float DeltaSeconds)
 
 	// Set velocity of player
 	CurrentSpeed = GetVelocity().Size();
-	UE_LOG(LogTemp, Warning, TEXT("Current Speed %f"), CurrentSpeed);
+	//UE_LOG(LogTemp, Warning, TEXT("Current Speed %f"), CurrentSpeed);
 	
 	// Set The max walk speed of player for Walk, Run and Sprint actions
 	GetCharacterMovement()->MaxWalkSpeed = UKismetMathLibrary::FInterpTo(GetCharacterMovement()->MaxWalkSpeed, MaxSpeed, DeltaSeconds, 4.0f);
 	//UE_LOG(LogTemp, Warning, TEXT("MAxWalkSpeed %f"), GetCharacterMovement()->MaxWalkSpeed);
 }
+
+void ADaishoProjectCharacter::Landed(const FHitResult& Hit)
+{
+	UE_LOG(LogTemp, Warning, TEXT("cayo"));
+	GetCharacterMovement()->DisableMovement();
+	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.5f, false);
+}
+
+
 
 void ADaishoProjectCharacter::TurnAtRate(float Rate)
 {
@@ -180,4 +190,10 @@ void ADaishoProjectCharacter::SetRunSpeed()
 void ADaishoProjectCharacter::SetSprintSpeed()
 {
 	MaxSpeed = SprintSpeed;
+}
+
+void ADaishoProjectCharacter::RecoverPlayerMovement()
+{
+	UE_LOG(LogTemp, Warning, TEXT("recobro el movimiento 0001"));
+	GetCharacterMovement()->SetDefaultMovementMode();
 }

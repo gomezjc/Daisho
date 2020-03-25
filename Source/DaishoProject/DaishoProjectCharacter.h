@@ -74,13 +74,9 @@ protected:
 	 */
 	void LookUpAtRate(float Rate);
 
-	/** Handler for when a touch input begins. */
-	void TouchStarted(ETouchIndex::Type FingerIndex, FVector Location);
-
-	/** Handler for when a touch input stops. */
-	void TouchStopped(ETouchIndex::Type FingerIndex, FVector Location);
-
 	virtual void Tick(float DeltaSeconds) override;
+
+	virtual void Landed(const FHitResult& Hit) override;
 
 protected:
 	// APawn interface
@@ -96,6 +92,7 @@ public:
 private:
 	// allows to get the Stop Speed and don't override the value when the loop of Tick Continues
 	bool bAccelerationFlag;
+	FTimerHandle MyTimerHandle;
 
 private:
 	// Setter for bAccelerationFlag Variable
@@ -107,5 +104,7 @@ private:
 	void SetRunSpeed();
 	
 	void SetSprintSpeed();
+
+	void RecoverPlayerMovement();
 };
 
