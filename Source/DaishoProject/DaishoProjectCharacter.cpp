@@ -29,6 +29,8 @@ ADaishoProjectCharacter::ADaishoProjectCharacter()
 	BaseTurnRate = 45.f;
 	BaseLookUpRate = 45.f;
 
+	// able character to crouch
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
 	// Set movement values
 	bIsMoving = false;
 	bIsAccelerating = false;
@@ -89,6 +91,9 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAction("Sprint", IE_Released, this, &ADaishoProjectCharacter::SetRunSpeed);
 
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ADaishoProjectCharacter::Dash);
+
+	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ADaishoProjectCharacter::CrouchAction);
+	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ADaishoProjectCharacter::UnCrouchAction);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADaishoProjectCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADaishoProjectCharacter::MoveRight);
@@ -240,7 +245,7 @@ void ADaishoProjectCharacter::Dash()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Empezo el dash new"));
 
-	if(!bIsDashing && !GetCharacterMovement()->IsFalling())
+	if(!bIsDashing && !GetCharacterMovement()->IsFalling() && !bIsCrouched)
 	{
 		bIsDashing = true;
 		CurrentDashPosition = GetCapsuleComponent()->GetComponentLocation();
@@ -256,6 +261,24 @@ void ADaishoProjectCharacter::Dash()
 	}
 }
 
+void ADaishoProjectCharacter::CrouchAction()
+{
+	UE_LOG(LogTemp, Warning, TEXT("llego a crouch"));
+	if (!bIsDashing && !GetCharacterMovement()->IsFalling())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("entro a crouch"));
+		Super::Crouch(true);
+	}
+}
+
+void ADaishoProjectCharacter::UnCrouchAction()
+{
+	if (!bIsDashing && !GetCharacterMovement()->IsFalling() && bIsCrouched)
+	{
+		Super::UnCrouch(true);
+	}
+}
+
 void ADaishoProjectCharacter::TimelineFloatReturn(float value)
 {
 	UE_LOG(LogTemp, Warning, TEXT("dashing %f"), value);
@@ -267,7 +290,7 @@ void ADaishoProjectCharacter::TimelineFloatReturn(float value)
 void ADaishoProjectCharacter::OnTimelineFinished()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Se detuvo 0.5"));
-	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.05f, false);
+	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.02f, false);
 	bIsDashing = false;
 	MyTimeline->Stop();
 }

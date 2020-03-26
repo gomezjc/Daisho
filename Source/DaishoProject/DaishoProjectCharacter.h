@@ -93,6 +93,8 @@ protected:
 	virtual void Jump() override;
 
 	virtual void StopJumping() override;
+
+	
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -136,6 +138,10 @@ private:
 	void DisablePlayerMovement();
 
 	void Dash();
+
+	void CrouchAction();
+
+	void UnCrouchAction();
 
 	UFUNCTION()
 	void TimelineFloatReturn(float value);
