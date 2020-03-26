@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Components/TimelineComponent.h"
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "DaishoProjectCharacter.generated.h"
@@ -47,11 +48,20 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	float SprintSpeed;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	float DashSpeed;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsMoving;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsAccelerating;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bIsDashing;
+
+	UPROPERTY(EditAnywhere, Category = "Timeline")
+	class UCurveFloat* fCurve;
 
 protected:
 
@@ -74,10 +84,15 @@ protected:
 	 */
 	void LookUpAtRate(float Rate);
 
+	virtual void BeginPlay() override;
+
 	virtual void Tick(float DeltaSeconds) override;
 
 	virtual void Landed(const FHitResult& Hit) override;
 
+	virtual void Jump() override;
+
+	virtual void StopJumping() override;
 protected:
 	// APawn interface
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -92,7 +107,18 @@ public:
 private:
 	// allows to get the Stop Speed and don't override the value when the loop of Tick Continues
 	bool bAccelerationFlag;
+
 	FTimerHandle MyTimerHandle;
+
+	class UTimelineComponent* MyTimeline;
+
+	FOnTimelineFloat InterpFunction{};
+
+	FOnTimelineEvent TimelineFinished{};
+
+	FVector CurrentDashPosition;
+	
+	FVector DestinationDashPosition;
 
 private:
 	// Setter for bAccelerationFlag Variable
@@ -106,5 +132,15 @@ private:
 	void SetSprintSpeed();
 
 	void RecoverPlayerMovement();
+
+	void DisablePlayerMovement();
+
+	void Dash();
+
+	UFUNCTION()
+	void TimelineFloatReturn(float value);
+
+	UFUNCTION()
+	void OnTimelineFinished();
 };
 
