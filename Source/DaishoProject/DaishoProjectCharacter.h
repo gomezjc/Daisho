@@ -60,6 +60,9 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bIsDashing;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bCanDash;
+
 	UPROPERTY(EditAnywhere, Category = "Timeline")
 	class UCurveFloat* fCurve;
 
@@ -94,6 +97,9 @@ protected:
 
 	virtual void StopJumping() override;
 
+	virtual void Crouch(bool bClientSimulation = false) override;
+
+	virtual void UnCrouch(bool bClientSimulation = false) override;
 	
 protected:
 	// APawn interface
@@ -140,8 +146,6 @@ private:
 	void Dash();
 
 	void CrouchAction();
-
-	void UnCrouchAction();
 
 	UFUNCTION()
 	void TimelineFloatReturn(float value);

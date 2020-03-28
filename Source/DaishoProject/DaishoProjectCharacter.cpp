@@ -4,7 +4,6 @@
 
 #include <string>
 
-#include "HeadMountedDisplayFunctionLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -36,6 +35,7 @@ ADaishoProjectCharacter::ADaishoProjectCharacter()
 	bIsAccelerating = false;
 	bAccelerationFlag = false;
 	bIsDashing = false;
+	bCanDash = true;
 	
 	WalkSpeed = 0.0f;
 	RunSpeed = 0.0f;
@@ -93,7 +93,6 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	PlayerInputComponent->BindAction("Dash", IE_Pressed, this, &ADaishoProjectCharacter::Dash);
 
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ADaishoProjectCharacter::CrouchAction);
-	PlayerInputComponent->BindAction("Crouch", IE_Released, this, &ADaishoProjectCharacter::UnCrouchAction);
 
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADaishoProjectCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADaishoProjectCharacter::MoveRight);
@@ -165,6 +164,16 @@ void ADaishoProjectCharacter::Jump()
 void ADaishoProjectCharacter::StopJumping()
 {
 	Super::StopJumping();
+}
+
+void ADaishoProjectCharacter::Crouch(bool bClientSimulation)
+{
+	Super::Crouch(bClientSimulation);
+}
+
+void ADaishoProjectCharacter::UnCrouch(bool bClientSimulation)
+{
+	Super::UnCrouch(bClientSimulation);
 }
 
 void ADaishoProjectCharacter::TurnAtRate(float Rate)
@@ -245,9 +254,10 @@ void ADaishoProjectCharacter::Dash()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Empezo el dash new"));
 
-	if(!bIsDashing && !GetCharacterMovement()->IsFalling() && !bIsCrouched)
+	if(!bIsDashing && !GetCharacterMovement()->IsFalling() && bCanDash)
 	{
 		bIsDashing = true;
+		bCanDash = false;
 		CurrentDashPosition = GetCapsuleComponent()->GetComponentLocation();
 		DestinationDashPosition = GetActorForwardVector() * DashSpeed;
 
@@ -263,19 +273,14 @@ void ADaishoProjectCharacter::Dash()
 
 void ADaishoProjectCharacter::CrouchAction()
 {
-	UE_LOG(LogTemp, Warning, TEXT("llego a crouch"));
-	if (!bIsDashing && !GetCharacterMovement()->IsFalling())
+	if (!bIsDashing && !GetCharacterMovement()->IsFalling() && !bIsCrouched)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("entro a crouch"));
-		Super::Crouch(true);
-	}
-}
-
-void ADaishoProjectCharacter::UnCrouchAction()
-{
-	if (!bIsDashing && !GetCharacterMovement()->IsFalling() && bIsCrouched)
+		UE_LOG(LogTemp, Warning, TEXT("se agacho"));
+		Crouch(false);
+	}else if(!bIsDashing && !GetCharacterMovement()->IsFalling() && bIsCrouched)
 	{
-		Super::UnCrouch(true);
+		UE_LOG(LogTemp, Warning, TEXT("se levanto"));
+		UnCrouch(false);
 	}
 }
 
@@ -289,8 +294,15 @@ void ADaishoProjectCharacter::TimelineFloatReturn(float value)
 
 void ADaishoProjectCharacter::OnTimelineFinished()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Se detuvo 0.5"));
-	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.02f, false);
+	UE_LOG(LogTemp, Warning, TEXT("se detuvo en dash 3"));
+	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.1f, false);
 	bIsDashing = false;
+	if(bIsCrouched)
+	{
+		UnCrouch(false);
+	}
 	MyTimeline->Stop();
+
+	// pending set the time for re use the ability
+	bCanDash = true;
 }
