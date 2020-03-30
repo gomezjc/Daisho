@@ -3,6 +3,7 @@
 #include "DaishoProjectGameMode.h"
 #include "DaishoProjectCharacter.h"
 #include "UObject/ConstructorHelpers.h"
+#include "UserWidget.h"
 
 ADaishoProjectGameMode::ADaishoProjectGameMode()
 {
@@ -11,5 +12,17 @@ ADaishoProjectGameMode::ADaishoProjectGameMode()
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
+	}
+}
+
+void ADaishoProjectGameMode::BeginPlay()
+{
+	if(HUDWidgetClass != nullptr)
+	{
+		CurrentWidget = CreateWidget<UUserWidget>(GetWorld(),HUDWidgetClass);
+		if(CurrentWidget != nullptr)
+		{
+			CurrentWidget->AddToViewport();
+		}
 	}
 }

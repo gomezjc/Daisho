@@ -67,10 +67,10 @@ ADaishoProjectCharacter::ADaishoProjectCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	MyTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("TimeLineDash"));
+	DashTimeline = CreateDefaultSubobject<UTimelineComponent>(TEXT("TimeLineDash"));
 	
-	InterpFunction.BindUFunction(this, FName("TimelineFloatReturn"));
-	TimelineFinished.BindUFunction(this, FName("OnTimelineFinished"));
+	InterpolationDash.BindUFunction(this, FName("TimelineFloatReturn"));
+	DashTimelineFinish.BindUFunction(this, FName("OnTimelineFinished"));
 
 }
 
@@ -82,7 +82,7 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 	// Set up gameplay key bindings
 	check(PlayerInputComponent);
 	PlayerInputComponent->BindAction("Jump", IE_Pressed, this, &ADaishoProjectCharacter::Jump);
-	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ADaishoProjectCharacter::StopJumping);
+	PlayerInputComponent->BindAction("Jump", IE_Released, this, &ACharacter::StopJumping);
 
 	PlayerInputComponent->BindAction("Walk", IE_Pressed, this, &ADaishoProjectCharacter::SetWalkSpeed);
 	PlayerInputComponent->BindAction("Walk", IE_Released, this, &ADaishoProjectCharacter::SetRunSpeed);
@@ -109,16 +109,10 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 void ADaishoProjectCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(LogTemp, Warning, TEXT("begin nuevo"));
 	if (fCurve)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("Curva Ok"));
-		MyTimeline->AddInterpFloat(fCurve, InterpFunction, FName("Alpha"));
-		MyTimeline->SetTimelineFinishedFunc(TimelineFinished);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("false curva"));
+		DashTimeline->AddInterpFloat(fCurve, InterpolationDash, FName("Alpha"));
+		DashTimeline->SetTimelineFinishedFunc(DashTimelineFinish);
 	}
 }
 
@@ -134,23 +128,21 @@ void ADaishoProjectCharacter::Tick(float DeltaSeconds)
 	{
 		SpeedWhenStopping = CurrentSpeed;
 		SetAccelerationFlag(false);
-		UE_LOG(LogTemp, Warning, TEXT("Speed when stopping %f"), SpeedWhenStopping);
 	}
 
 	// Set velocity of player
 	CurrentSpeed = GetVelocity().Size();
-	//UE_LOG(LogTemp, Warning, TEXT("Current Speed %f"), CurrentSpeed);
 	
 	// Set The max walk speed of player for Walk, Run and Sprint actions
 	GetCharacterMovement()->MaxWalkSpeed = UKismetMathLibrary::FInterpTo(GetCharacterMovement()->MaxWalkSpeed, MaxSpeed, DeltaSeconds, 4.0f);
-	//UE_LOG(LogTemp, Warning, TEXT("MAxWalkSpeed %f"), GetCharacterMovement()->MaxWalkSpeed);
 }
 
 void ADaishoProjectCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
+	// Restrict the player movement after landed by 0.5 sec
 	DisablePlayerMovement();
-	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.5f, false);
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.5f, false);
 }
 
 void ADaishoProjectCharacter::Jump()
@@ -159,21 +151,6 @@ void ADaishoProjectCharacter::Jump()
 	{
 		Super::Jump();
 	}
-}
-
-void ADaishoProjectCharacter::StopJumping()
-{
-	Super::StopJumping();
-}
-
-void ADaishoProjectCharacter::Crouch(bool bClientSimulation)
-{
-	Super::Crouch(bClientSimulation);
-}
-
-void ADaishoProjectCharacter::UnCrouch(bool bClientSimulation)
-{
-	Super::UnCrouch(bClientSimulation);
 }
 
 void ADaishoProjectCharacter::TurnAtRate(float Rate)
@@ -241,7 +218,6 @@ void ADaishoProjectCharacter::SetSprintSpeed()
 
 void ADaishoProjectCharacter::RecoverPlayerMovement()
 {
-	UE_LOG(LogTemp, Warning, TEXT("recobro el movimiento 0001"));
 	GetCharacterMovement()->SetDefaultMovementMode();
 }
 
@@ -252,8 +228,6 @@ void ADaishoProjectCharacter::DisablePlayerMovement()
 
 void ADaishoProjectCharacter::Dash()
 {
-	UE_LOG(LogTemp, Warning, TEXT("Empezo el dash new"));
-
 	if(!bIsDashing && !GetCharacterMovement()->IsFalling() && bCanDash)
 	{
 		bIsDashing = true;
@@ -262,12 +236,9 @@ void ADaishoProjectCharacter::Dash()
 		DestinationDashPosition = GetActorForwardVector() * DashSpeed;
 
 		DisablePlayerMovement();
-		MyTimeline->SetLooping(false);
-		MyTimeline->SetIgnoreTimeDilation(true);
-		MyTimeline->PlayFromStart();
-	}else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("Paila, espere termino el dash o estoy saltando"));
+		DashTimeline->SetLooping(false);
+		DashTimeline->SetIgnoreTimeDilation(true);
+		DashTimeline->PlayFromStart();
 	}
 }
 
@@ -275,18 +246,15 @@ void ADaishoProjectCharacter::CrouchAction()
 {
 	if (!bIsDashing && !GetCharacterMovement()->IsFalling() && !bIsCrouched)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("se agacho"));
-		Crouch(false);
+		Super::Crouch(false);
 	}else if(!bIsDashing && !GetCharacterMovement()->IsFalling() && bIsCrouched)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("se levanto"));
-		UnCrouch(false);
+		Super::UnCrouch(false);
 	}
 }
 
 void ADaishoProjectCharacter::TimelineFloatReturn(float value)
 {
-	UE_LOG(LogTemp, Warning, TEXT("dashing %f"), value);
 	GetCapsuleComponent()->SetRelativeLocationAndRotation(
 		FMath::Lerp(CurrentDashPosition, CurrentDashPosition + DestinationDashPosition, value), 
 		GetCapsuleComponent()->GetComponentRotation(),true);
@@ -294,15 +262,13 @@ void ADaishoProjectCharacter::TimelineFloatReturn(float value)
 
 void ADaishoProjectCharacter::OnTimelineFinished()
 {
-	UE_LOG(LogTemp, Warning, TEXT("se detuvo en dash 3"));
-	GetWorldTimerManager().SetTimer(MyTimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.1f, false);
+	GetWorldTimerManager().SetTimer(TimerHandle, this, &ADaishoProjectCharacter::RecoverPlayerMovement, 0.1f, false);
 	bIsDashing = false;
 	if(bIsCrouched)
 	{
-		UnCrouch(false);
+		Super::UnCrouch(false);
 	}
-	MyTimeline->Stop();
-
+	DashTimeline->Stop();
 	// pending set the time for re use the ability
 	bCanDash = true;
 }

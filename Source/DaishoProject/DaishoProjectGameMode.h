@@ -13,6 +13,16 @@ class ADaishoProjectGameMode : public AGameModeBase
 
 public:
 	ADaishoProjectGameMode();
+
+protected:
+
+	virtual void BeginPlay() override;
+	
+	UPROPERTY(EditDefaultsOnly,BlueprintReadWrite,Category="HUD", Meta=(BlueprintProtected="true"))
+	TSubclassOf<class UUserWidget> HUDWidgetClass;
+
+	UPROPERTY()
+	class UUserWidget* CurrentWidget;
 };
 
 

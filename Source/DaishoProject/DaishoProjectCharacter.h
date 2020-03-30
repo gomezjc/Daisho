@@ -94,12 +94,6 @@ protected:
 	virtual void Landed(const FHitResult& Hit) override;
 
 	virtual void Jump() override;
-
-	virtual void StopJumping() override;
-
-	virtual void Crouch(bool bClientSimulation = false) override;
-
-	virtual void UnCrouch(bool bClientSimulation = false) override;
 	
 protected:
 	// APawn interface
@@ -116,13 +110,13 @@ private:
 	// allows to get the Stop Speed and don't override the value when the loop of Tick Continues
 	bool bAccelerationFlag;
 
-	FTimerHandle MyTimerHandle;
+	FTimerHandle TimerHandle;
 
-	class UTimelineComponent* MyTimeline;
+	class UTimelineComponent* DashTimeline;
 
-	FOnTimelineFloat InterpFunction{};
+	FOnTimelineFloat InterpolationDash{};
 
-	FOnTimelineEvent TimelineFinished{};
+	FOnTimelineEvent DashTimelineFinish{};
 
 	FVector CurrentDashPosition;
 	
