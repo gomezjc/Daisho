@@ -13,13 +13,17 @@ ADP_Enemy::ADP_Enemy()
 	CreateInitialWeapon();
 	PawnSensingComponent = CreateDefaultSubobject<UPawnSensingComponent>(TEXT("PawnSensing"));
 	PawnSensingComponent->SetPeripheralVisionAngle(45.0f);
+	PawnSensingComponent->HearingThreshold = 300.0f;
+	PawnSensingComponent->LOSHearingThreshold = 300.0f;
+	PawnSensingComponent->SightRadius = 1200.0f;
+	bIsChasingPlayer = false;
+	bCanAttack = false;
 }
 
 void ADP_Enemy::BeginPlay()
 {
 	Super::BeginPlay();
-	PawnSensingComponent->OnSeePawn.AddDynamic(this, &ADP_Enemy::OnSeeCharacter);
-	UE_LOG(LogTemp, Warning, TEXT("Inicio2"));
+	PawnSensingComponent->OnSeePawn.AddDynamic(this, &ADP_Enemy::OnSeeCharacter);	
 }
 
 void ADP_Enemy::CreateInitialWeapon()
@@ -38,5 +42,13 @@ void ADP_Enemy::CreateInitialWeapon()
 
 void ADP_Enemy::OnSeeCharacter(APawn* OtherPawn)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Veo al pawn"));
+	if(!bIsChasingPlayer)
+	{
+		TargetPlayer = Cast<ACharacter>(OtherPawn);
+		if (IsValid(TargetPlayer))
+		{
+			bIsChasingPlayer = true;
+		}
+	}
+	
 }
