@@ -1,9 +1,6 @@
 // Copyright 1998-2019 Epic Games, Inc. All Rights Reserved.
 
 #include "DaishoProjectCharacter.h"
-
-#include <string>
-
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/InputComponent.h"
@@ -13,6 +10,10 @@
 #include "Math/Vector.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "TimerManager.h"
+#include "Animation/AnimInstance.h"
+#include "Components/SphereComponent.h"
+#include "DaishoProject.h"
+#include "Kismet/GameplayStatics.h"
 
 //////////////////////////////////////////////////////////////////////////
 // ADaishoProjectCharacter
@@ -36,6 +37,7 @@ ADaishoProjectCharacter::ADaishoProjectCharacter()
 	bAccelerationFlag = false;
 	bIsDashing = false;
 	bCanDash = true;
+	bIsAttacking = false;
 	
 	WalkSpeed = 0.0f;
 	RunSpeed = 0.0f;
@@ -44,6 +46,10 @@ ADaishoProjectCharacter::ADaishoProjectCharacter()
 	SpeedWhenStopping = 0.0f;
 	CurrentSpeed = 0.0f;
 	MaxSpeed = 600.0f;
+
+	MeleeDamage = 10.0f;
+	MaxNumComboMultiplier = 3.0f;
+	CurrentComboMultiplier = 1.0f;
 
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
@@ -72,6 +78,12 @@ ADaishoProjectCharacter::ADaishoProjectCharacter()
 	InterpolationDash.BindUFunction(this, FName("TimelineFloatReturn"));
 	DashTimelineFinish.BindUFunction(this, FName("OnTimelineFinished"));
 
+	AttackDetectorComponent = CreateDefaultSubobject<USphereComponent>(TEXT("AttackCollision"));
+	AttackDetectorComponent->SetupAttachment(RootComponent);
+	AttackDetectorComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	AttackDetectorComponent->SetCollisionResponseToChannel(COLLISION_ENEMY, ECR_Overlap);
+	AttackDetectorComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -94,6 +106,9 @@ void ADaishoProjectCharacter::SetupPlayerInputComponent(class UInputComponent* P
 
 	PlayerInputComponent->BindAction("Crouch", IE_Pressed, this, &ADaishoProjectCharacter::CrouchAction);
 
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &ADaishoProjectCharacter::StartAttack);
+	PlayerInputComponent->BindAction("Attack", IE_Released, this, &ADaishoProjectCharacter::StopAttack);
+
 	PlayerInputComponent->BindAxis("MoveForward", this, &ADaishoProjectCharacter::MoveForward);
 	PlayerInputComponent->BindAxis("MoveRight", this, &ADaishoProjectCharacter::MoveRight);
 
@@ -113,6 +128,16 @@ void ADaishoProjectCharacter::BeginPlay()
 	{
 		DashTimeline->AddInterpFloat(fCurve, InterpolationDash, FName("Alpha"));
 		DashTimeline->SetTimelineFinishedFunc(DashTimelineFinish);
+	}
+	InitializeReferences();
+	AttackDetectorComponent->OnComponentBeginOverlap.AddDynamic(this, &ADaishoProjectCharacter::MakeMeleeDamage);
+}
+
+void ADaishoProjectCharacter::InitializeReferences()
+{
+	if (IsValid(GetMesh()))
+	{
+		AnimInstance = GetMesh()->GetAnimInstance();
 	}
 }
 
@@ -271,4 +296,68 @@ void ADaishoProjectCharacter::OnTimelineFinished()
 	DashTimeline->Stop();
 	// pending set the time for re use the ability
 	bCanDash = true;
+}
+
+void ADaishoProjectCharacter::SetMeleeDetectorCollision(ECollisionEnabled::Type NewCollisionState)
+{
+	AttackDetectorComponent->SetCollisionEnabled(NewCollisionState);
+}
+
+void ADaishoProjectCharacter::StartAttack()
+{
+	if (bIsAttacking){
+		if (bIsComboEnabled)
+		{
+			if (CurrentComboMultiplier < MaxNumComboMultiplier)
+			{
+				CurrentComboMultiplier++;
+				SetComboEnabled(false);
+			}
+			else
+			{
+				return;
+			}
+		}
+		else
+		{
+			return;
+		}
+	}
+
+	if (IsValid(AnimInstance) && IsValid(MeleeMontage))
+	{
+		AnimInstance->Montage_Play(MeleeMontage);
+		AnimInstance->Montage_JumpToSection(MeleeMontage->GetSectionName(CurrentComboMultiplier - 1), MeleeMontage);
+	}
+	SetActionState(true);
+}
+
+void ADaishoProjectCharacter::StopAttack()
+{
+	
+}
+
+void ADaishoProjectCharacter::MakeMeleeDamage(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	if (IsValid(OtherActor))
+	{
+		UGameplayStatics::ApplyPointDamage(OtherActor, MeleeDamage * CurrentComboMultiplier, SweepResult.Location, SweepResult, GetInstigatorController(), this, nullptr);
+	}
+}
+
+void ADaishoProjectCharacter::SetActionState(bool NewState)
+{
+	bIsAttacking = NewState;
+}
+
+void ADaishoProjectCharacter::SetComboEnabled(bool NewState)
+{
+	bIsComboEnabled = NewState;
+}
+
+void ADaishoProjectCharacter::ResetCombo()
+{
+	SetComboEnabled(false);
+	CurrentComboMultiplier = 1.0f;
 }

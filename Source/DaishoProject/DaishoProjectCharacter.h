@@ -66,6 +66,30 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Timeline")
 	class UCurveFloat* fCurve;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Melee")
+	float MeleeDamage;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Melee")
+	bool bIsComboEnabled;
+
+
+	UPROPERTY(EditDefaultsOnly, Category = "Melee", meta = (ClampMin = 1.0, UIMin = 1.0))
+	float MaxNumComboMultiplier;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Melee", meta = (ClampMin = 1.0, UIMin = 1.0))
+	float CurrentComboMultiplier;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Melee")
+	bool bIsAttacking;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	class USphereComponent* AttackDetectorComponent;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Animation")
+	class UAnimMontage* MeleeMontage;
+
+	class UAnimInstance* AnimInstance;
+
 protected:
 
 
@@ -94,6 +118,16 @@ protected:
 	virtual void Landed(const FHitResult& Hit) override;
 
 	virtual void Jump() override;
+
+	void StartAttack();
+
+	void StopAttack();
+
+	void InitializeReferences();
+
+	UFUNCTION()
+	void MakeMeleeDamage(class UPrimitiveComponent* OverlappedComponent, class AActor* OtherActor, class UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
 	
 protected:
 	// APawn interface
@@ -146,5 +180,16 @@ private:
 
 	UFUNCTION()
 	void OnTimelineFinished();
+
+public:
+	void SetMeleeDetectorCollision(ECollisionEnabled::Type NewCollisionState);
+
+	void SetActionState(bool NewState);
+
+	UFUNCTION(BlueprintCallable)
+	void SetComboEnabled(bool NewState);
+
+	UFUNCTION(BlueprintCallable)
+	void ResetCombo();
 };
 
